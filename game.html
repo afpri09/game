@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Math Quiz FPS</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #0a0a2e, #16213e, #1a1a3a);
+            color: white;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #1e3c72 0%, #2a5298 50%, #0f0f23 100%);
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #eee, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(2px 2px at 160px 30px, #fff, transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+            animation: twinkle 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .game-ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .score, .timer, .ammo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 2px solid #ff4444;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.8);
+            z-index: 15;
+        }
+
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #ff4444;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.8);
+        }
+
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .enemy {
+            position: absolute;
+            width: 100px;
+            height: 80px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border-radius: 10px;
+            border: 3px solid #ff4757;
+            cursor: crosshair;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.6);
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .enemy:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255, 71, 87, 0.8);
+        }
+
+        .enemy.correct {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        }
+
+        .enemy.wrong {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            border-color: #ff4757;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.6);
+        }
+
+        .math-question {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .math-answer {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .gun {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 80px;
+            background: linear-gradient(45deg, #2c2c2c, #4a4a4a);
+            border-radius: 10px;
+            border: 2px solid #666;
+            z-index: 20;
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 25;
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px 60px;
+            gap: 5px;
+        }
+
+        .dpad-btn {
+            background: linear-gradient(45deg, #333, #555);
+            border: 2px solid #777;
+            border-radius: 10px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+            transition: all 0.1s ease;
+        }
+
+        .dpad-btn:active {
+            background: linear-gradient(45deg, #555, #777);
+            transform: scale(0.95);
+        }
+
+        .shoot-btn {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff4444, #cc3333);
+            border: 3px solid #ff6666;
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+        }
+
+        .shoot-btn:active {
+            background: linear-gradient(45deg, #cc3333, #aa2222);
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls {
+                display: flex;
+            }
+            
+            .gun {
+                display: none;
+            }
+            
+            .game-title {
+                font-size: 32px;
+            }
+            
+            .game-subtitle {
+                font-size: 18px;
+            }
+            
+            .instructions {
+                max-width: 90%;
+                padding: 15px;
+            }
+            
+            .hud {
+                padding: 10px 15px;
+                font-size: 16px;
+            }
+            
+            .enemy {
+                width: 90px;
+                height: 70px;
+                font-size: 11px;
+            }
+            
+            .math-question {
+                font-size: 12px;
+            }
+            
+            .math-answer {
+                font-size: 14px;
+            }
+        }
+
+        .gun::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -20px;
+            width: 40px;
+            height: 20px;
+            background: linear-gradient(45deg, #1a1a1a, #333);
+            border-radius: 5px;
+        }
+
+        .gun::after {
+            content: '🔫';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+        }
+
+        .gun.shooting {
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        .muzzle-flash {
+            position: absolute;
+            top: 10px;
+            left: -30px;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #ffff00 0%, #ff6600 50%, transparent 100%);
+            border-radius: 50%;
+            opacity: 0;
+            animation: flash 0.1s ease-out;
+        }
+
+        @keyframes flash {
+            0% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .explosion {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #ffff00 0%, #ff6600 30%, #ff0000 60%, transparent 100%);
+            border-radius: 50%;
+            animation: explode 0.5s ease-out forwards;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .game-over, .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+
+        .game-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .game-subtitle {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #00ff88;
+            margin-bottom: 30px;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .start-btn, .restart-btn {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .start-btn:hover, .restart-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
+        }
+
+        .final-score {
+            font-size: 32px;
+            color: #ffff00;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(255, 255, 0, 0.8);
+        }
+
+        .planet {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+
+        .planet1 {
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #ee5a24);
+            top: 20%;
+            right: 10%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .planet2 {
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle at 30% 30%, #4834d4, #686de0);
+            bottom: 30%;
+            left: 15%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="stars"></div>
+        <div class="planet planet1"></div>
+        <div class="planet planet2"></div>
+        
+        <div class="start-screen" id="startScreen">
+            <div class="game-title">🚀 SPACE MATH QUIZ FPS 🚀</div>
+            <div class="game-subtitle">Tembak jawaban matematika yang benar!</div>
+            <div class="instructions">
+                <h3 style="color: #00ff88; margin-bottom: 15px;">📋 CARA BERMAIN:</h3>
+                <div style="text-align: left; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                    🎯 <strong>Kontrol:</strong><br>
+                    • HP: Gunakan tombol panah dan tombol tembak<br>
+                    • PC: Mouse/keyboard WASD + spasi<br>
+                    • Sentuh target untuk menembak langsung<br><br>
+                    
+                    🎮 <strong>Aturan:</strong><br>
+                    • Tembak jawaban matematika yang BENAR<br>
+                    • Jawaban benar: +100 poin ✅<br>
+                    • Jawaban salah: -50 poin ❌<br>
+                    • Waktu: 2 menit ⏰<br><br>
+                    
+                    🔢 <strong>Soal:</strong> +, -, ×, ÷<br>
+                    🌟 <strong>Cocok untuk anak-anak!</strong>
+                </div>
+            </div>
+            <button class="start-btn" onclick="startGame()">MULAI PERMAINAN</button>
+        </div>
+
+        <div class="game-ui" id="gameUI" style="display: none;">
+            <div class="hud">
+                <div class="score">Skor: <span id="score">0</span></div>
+                <div class="timer">Waktu: <span id="timer">180</span>s</div>
+                <div class="ammo">Ammo: <span id="ammo">∞</span></div>
+            </div>
+            <div class="crosshair"></div>
+            <div class="gun" id="gun" onclick="shoot()"></div>
+            
+            <!-- Mobile Controls -->
+            <div class="mobile-controls">
+                <div class="dpad">
+                    <div></div>
+                    <div class="dpad-btn" data-direction="up">↑</div>
+                    <div></div>
+                    <div class="dpad-btn" data-direction="left">←</div>
+                    <div></div>
+                    <div class="dpad-btn" data-direction="right">→</div>
+                    <div></div>
+                    <div class="dpad-btn" data-direction="down">↓</div>
+                    <div></div>
+                </div>
+                <div class="shoot-btn" onclick="shoot()">🔫<br>TEMBAK</div>
+            </div>
+        </div>
+
+        <div class="game-over" id="gameOver" style="display: none;">
+            <div class="game-title">GAME OVER</div>
+            <div class="final-score">Skor Akhir: <span id="finalScore">0</span></div>
+            <button class="restart-btn" onclick="startGame()">MAIN LAGI</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            score: 0,
+            timeLeft: 120,
+            gameActive: false,
+            enemies: [],
+            gameTimer: null,
+            currentTheme: null
+        };
+
+        const gameThemes = [
+            {
+                name: "Space Adventure",
+                title: "🚀 SPACE MATH QUIZ FPS 🚀",
+                subtitle: "Tembak jawaban matematika yang benar!",
+                background: "radial-gradient(ellipse at center, #1e3c72 0%, #2a5298 50%, #0f0f23 100%)",
+                enemyColors: ["linear-gradient(45deg, #ff6b6b, #ee5a24)", "linear-gradient(45deg, #4834d4, #686de0)", "linear-gradient(45deg, #00d2d3, #54a0ff)"],
+                planets: [
+                    { size: "60px", color: "radial-gradient(circle at 30% 30%, #ff6b6b, #ee5a24)", position: { top: "20%", right: "10%" } },
+                    { size: "40px", color: "radial-gradient(circle at 30% 30%, #4834d4, #686de0)", position: { bottom: "30%", left: "15%" } }
+                ]
+            },
+            {
+                name: "Ocean World",
+                title: "🌊 OCEAN MATH ADVENTURE 🐠",
+                subtitle: "Tangkap ikan dengan jawaban benar!",
+                background: "radial-gradient(ellipse at center, #006ba6 0%, #0582ca 50%, #003566 100%)",
+                enemyColors: ["linear-gradient(45deg, #ffd60a, #ffbe0b)", "linear-gradient(45deg, #f72585, #b5179e)", "linear-gradient(45deg, #06ffa5, #00cc88)"],
+                planets: [
+                    { size: "80px", color: "radial-gradient(circle at 30% 30%, #06ffa5, #00cc88)", position: { top: "15%", right: "8%" } },
+                    { size: "50px", color: "radial-gradient(circle at 30% 30%, #ffd60a, #ffbe0b)", position: { bottom: "25%", left: "12%" } },
+                    { size: "35px", color: "radial-gradient(circle at 30% 30%, #f72585, #b5179e)", position: { top: "60%", right: "20%" } }
+                ]
+            },
+            {
+                name: "Forest Magic",
+                title: "🌳 FOREST MATH MAGIC 🧚‍♀️",
+                subtitle: "Kumpulkan kristal dengan jawaban tepat!",
+                background: "radial-gradient(ellipse at center, #2d5016 0%, #3e6b1f 50%, #1a2e0a 100%)",
+                enemyColors: ["linear-gradient(45deg, #7209b7, #a663cc)", "linear-gradient(45deg, #f72585, #b5179e)", "linear-gradient(45deg, #ffd60a, #ffbe0b)"],
+                planets: [
+                    { size: "70px", color: "radial-gradient(circle at 30% 30%, #7209b7, #a663cc)", position: { top: "25%", right: "15%" } },
+                    { size: "45px", color: "radial-gradient(circle at 30% 30%, #f72585, #b5179e)", position: { bottom: "35%", left: "10%" } }
+                ]
+            },
+            {
+                name: "Desert Quest",
+                title: "🏜️ DESERT MATH QUEST 🐪",
+                subtitle: "Temukan harta karun dengan matematika!",
+                background: "radial-gradient(ellipse at center, #d4a574 0%, #bc9a6a 50%, #8b6914 100%)",
+                enemyColors: ["linear-gradient(45deg, #ff6b35, #f7931e)", "linear-gradient(45deg, #c44569, #f8b500)", "linear-gradient(45deg, #00d2d3, #54a0ff)"],
+                planets: [
+                    { size: "65px", color: "radial-gradient(circle at 30% 30%, #ff6b35, #f7931e)", position: { top: "18%", right: "12%" } },
+                    { size: "40px", color: "radial-gradient(circle at 30% 30%, #c44569, #f8b500)", position: { bottom: "28%", left: "18%" } },
+                    { size: "30px", color: "radial-gradient(circle at 30% 30%, #00d2d3, #54a0ff)", position: { top: "55%", right: "25%" } }
+                ]
+            },
+            {
+                name: "Ice Kingdom",
+                title: "❄️ ICE MATH KINGDOM 🏰",
+                subtitle: "Pecahkan es dengan jawaban benar!",
+                background: "radial-gradient(ellipse at center, #a8dadc 0%, #457b9d 50%, #1d3557 100%)",
+                enemyColors: ["linear-gradient(45deg, #e63946, #f1faee)", "linear-gradient(45deg, #a8dadc, #457b9d)", "linear-gradient(45deg, #f1faee, #e63946)"],
+                planets: [
+                    { size: "55px", color: "radial-gradient(circle at 30% 30%, #e63946, #f1faee)", position: { top: "22%", right: "14%" } },
+                    { size: "75px", color: "radial-gradient(circle at 30% 30%, #a8dadc, #457b9d)", position: { bottom: "32%", left: "8%" } }
+                ]
+            }
+        ];
+
+        function generateMathQuestion() {
+            const questionTypes = [
+                // Penjumlahan mudah
+                () => {
+                    const num1 = Math.floor(Math.random() * 30) + 1;
+                    const num2 = Math.floor(Math.random() * 30) + 1;
+                    return { question: `${num1} + ${num2}`, answer: num1 + num2 };
+                },
+                // Pengurangan mudah
+                () => {
+                    const num1 = Math.floor(Math.random() * 40) + 20;
+                    const num2 = Math.floor(Math.random() * 15) + 1;
+                    return { question: `${num1} - ${num2}`, answer: num1 - num2 };
+                },
+                // Perkalian mudah
+                () => {
+                    const num1 = Math.floor(Math.random() * 10) + 1;
+                    const num2 = Math.floor(Math.random() * 10) + 1;
+                    return { question: `${num1} × ${num2}`, answer: num1 * num2 };
+                },
+                // Pembagian mudah
+                () => {
+                    const answer = Math.floor(Math.random() * 10) + 1;
+                    const num2 = Math.floor(Math.random() * 8) + 2;
+                    const num1 = answer * num2;
+                    return { question: `${num1} ÷ ${num2}`, answer: answer };
+                },
+                // Penjumlahan 3 angka
+                () => {
+                    const num1 = Math.floor(Math.random() * 15) + 1;
+                    const num2 = Math.floor(Math.random() * 15) + 1;
+                    const num3 = Math.floor(Math.random() * 15) + 1;
+                    return { question: `${num1} + ${num2} + ${num3}`, answer: num1 + num2 + num3 };
+                },
+                // Campuran mudah
+                () => {
+                    const num1 = Math.floor(Math.random() * 20) + 1;
+                    const num2 = Math.floor(Math.random() * 10) + 1;
+                    const num3 = Math.floor(Math.random() * 5) + 1;
+                    const result = (num1 + num2) - num3;
+                    return { question: `${num1} + ${num2} - ${num3}`, answer: result };
+                },
+                // Kelipatan 10
+                () => {
+                    const num1 = (Math.floor(Math.random() * 9) + 1) * 10;
+                    const num2 = (Math.floor(Math.random() * 5) + 1) * 10;
+                    const operations = ['+', '-'];
+                    const op = operations[Math.floor(Math.random() * operations.length)];
+                    const answer = op === '+' ? num1 + num2 : num1 - num2;
+                    return { question: `${num1} ${op} ${num2}`, answer: answer };
+                }
+            ];
+            
+            const randomType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+            const mathData = randomType();
+            const correctAnswer = mathData.answer;
+            
+            const wrongAnswers = [];
+            while(wrongAnswers.length < 3) {
+                let wrong;
+                if (correctAnswer <= 10) {
+                    wrong = correctAnswer + Math.floor(Math.random() * 6) - 3;
+                } else if (correctAnswer <= 50) {
+                    wrong = correctAnswer + Math.floor(Math.random() * 20) - 10;
+                } else {
+                    wrong = correctAnswer + Math.floor(Math.random() * 40) - 20;
+                }
+                
+                if (wrong !== correctAnswer && wrong > 0 && !wrongAnswers.includes(wrong)) {
+                    wrongAnswers.push(wrong);
+                }
+            }
+            
+            return {
+                question: mathData.question,
+                correctAnswer: correctAnswer,
+                wrongAnswers: wrongAnswers
+            };
+        }
+
+        function selectRandomTheme() {
+            const randomIndex = Math.floor(Math.random() * gameThemes.length);
+            gameState.currentTheme = gameThemes[randomIndex];
+            
+            // Update title dan subtitle
+            document.querySelector('.game-title').textContent = gameState.currentTheme.title;
+            document.querySelector('.game-subtitle').textContent = gameState.currentTheme.subtitle;
+            
+            // Update background
+            document.querySelector('.game-container').style.background = gameState.currentTheme.background;
+            
+            // Update planets
+            const existingPlanets = document.querySelectorAll('.planet');
+            existingPlanets.forEach(planet => planet.remove());
+            
+            gameState.currentTheme.planets.forEach((planetData, index) => {
+                const planet = document.createElement('div');
+                planet.className = `planet planet${index + 1}`;
+                planet.style.width = planetData.size;
+                planet.style.height = planetData.size;
+                planet.style.background = planetData.color;
+                
+                // Set position
+                Object.keys(planetData.position).forEach(key => {
+                    planet.style[key] = planetData.position[key];
+                });
+                
+                document.querySelector('.game-container').appendChild(planet);
+            });
+        }
+
+        function startGame() {
+            // Pilih tema random setiap kali mulai game
+            selectRandomTheme();
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'block';
+            
+            gameState.score = 0;
+            gameState.timeLeft = 120;
+            gameState.gameActive = true;
+            gameState.enemies = [];
+            
+            updateUI();
+            startTimer();
+            spawnEnemies();
+        }
+
+        function startTimer() {
+            gameState.gameTimer = setInterval(() => {
+                gameState.timeLeft--;
+                updateUI();
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('timer').textContent = gameState.timeLeft;
+        }
+
+        function spawnEnemies() {
+            if (!gameState.gameActive) return;
+            
+            // Spawn enemy setiap 2-4 detik
+            setTimeout(() => {
+                if (gameState.gameActive) {
+                    createEnemy();
+                    spawnEnemies();
+                }
+            }, Math.random() * 2000 + 2000);
+        }
+
+        function createEnemy() {
+            const enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            
+            const mathData = generateMathQuestion();
+            const isCorrect = Math.random() < 0.5; // 50% chance untuk jawaban benar
+            const displayAnswer = isCorrect ? mathData.correctAnswer : mathData.wrongAnswers[Math.floor(Math.random() * mathData.wrongAnswers.length)];
+            
+            enemy.innerHTML = `
+                <div class="math-question">${mathData.question}</div>
+                <div class="math-answer">${displayAnswer}</div>
+            `;
+            
+            enemy.dataset.type = isCorrect ? 'correct' : 'wrong';
+            enemy.dataset.correctAnswer = mathData.correctAnswer;
+            enemy.dataset.displayAnswer = displayAnswer;
+            
+            // Gunakan warna dari tema yang sedang aktif
+            if (gameState.currentTheme) {
+                const randomColorIndex = Math.floor(Math.random() * gameState.currentTheme.enemyColors.length);
+                enemy.style.background = gameState.currentTheme.enemyColors[randomColorIndex];
+            }
+            
+            // Posisi random
+            enemy.style.left = Math.random() * (window.innerWidth - 120) + 'px';
+            enemy.style.top = Math.random() * (window.innerHeight - 200) + 100 + 'px';
+            
+            // Event listener untuk klik
+            enemy.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleEnemyClick(enemy);
+            });
+            
+            document.querySelector('.game-container').appendChild(enemy);
+            gameState.enemies.push(enemy);
+            
+            // Auto remove setelah 8 detik
+            setTimeout(() => {
+                if (enemy.parentNode) {
+                    enemy.remove();
+                    gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                }
+            }, 8000);
+        }
+
+        function handleEnemyClick(enemy) {
+            const type = enemy.dataset.type;
+            
+            if (type === 'correct') {
+                enemy.classList.add('correct');
+                gameState.score += 100;
+                createExplosion(enemy);
+                
+                setTimeout(() => {
+                    if (enemy.parentNode) {
+                        enemy.remove();
+                        gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+                    }
+                }, 300);
+            } else {
+                enemy.classList.add('wrong');
+                gameState.score = Math.max(0, gameState.score - 50);
+                
+                // Shake effect
+                enemy.style.animation = 'shake 0.5s ease-in-out';
+            }
+            
+            updateUI();
+        }
+
+        function shoot() {
+            const gun = document.getElementById('gun');
+            gun.classList.add('shooting');
+            
+            // Muzzle flash
+            const flash = document.createElement('div');
+            flash.className = 'muzzle-flash';
+            gun.appendChild(flash);
+            
+            setTimeout(() => {
+                gun.classList.remove('shooting');
+                flash.remove();
+            }, 100);
+            
+            // Check if crosshair hits any enemy
+            const crosshair = document.querySelector('.crosshair');
+            const crosshairRect = crosshair.getBoundingClientRect();
+            const crosshairCenterX = crosshairRect.left + crosshairRect.width / 2;
+            const crosshairCenterY = crosshairRect.top + crosshairRect.height / 2;
+            
+            gameState.enemies.forEach(enemy => {
+                const enemyRect = enemy.getBoundingClientRect();
+                if (crosshairCenterX >= enemyRect.left && 
+                    crosshairCenterX <= enemyRect.right &&
+                    crosshairCenterY >= enemyRect.top && 
+                    crosshairCenterY <= enemyRect.bottom) {
+                    handleEnemyClick(enemy);
+                }
+            });
+        }
+
+        function createExplosion(enemy) {
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            
+            const rect = enemy.getBoundingClientRect();
+            explosion.style.left = (rect.left + rect.width / 2 - 50) + 'px';
+            explosion.style.top = (rect.top + rect.height / 2 - 50) + 'px';
+            
+            document.querySelector('.game-container').appendChild(explosion);
+            
+            setTimeout(() => {
+                explosion.remove();
+            }, 500);
+        }
+
+        function endGame() {
+            gameState.gameActive = false;
+            clearInterval(gameState.gameTimer);
+            
+            // Hapus semua enemies
+            gameState.enemies.forEach(enemy => {
+                if (enemy.parentNode) {
+                    enemy.remove();
+                }
+            });
+            gameState.enemies = [];
+            
+            document.getElementById('gameUI').style.display = 'none';
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        // Prevent context menu
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        let crosshairPosition = { x: 50, y: 50 }; // Posisi dalam persen
+
+        function updateCrosshairPosition() {
+            const crosshair = document.querySelector('.crosshair');
+            crosshair.style.left = crosshairPosition.x + '%';
+            crosshair.style.top = crosshairPosition.y + '%';
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.gameActive) return;
+            
+            const moveSpeed = 2; // Kecepatan gerakan dalam persen
+            
+            switch(e.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    e.preventDefault();
+                    crosshairPosition.y = Math.max(10, crosshairPosition.y - moveSpeed);
+                    updateCrosshairPosition();
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    e.preventDefault();
+                    crosshairPosition.y = Math.min(90, crosshairPosition.y + moveSpeed);
+                    updateCrosshairPosition();
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    e.preventDefault();
+                    crosshairPosition.x = Math.max(5, crosshairPosition.x - moveSpeed);
+                    updateCrosshairPosition();
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    e.preventDefault();
+                    crosshairPosition.x = Math.min(95, crosshairPosition.x + moveSpeed);
+                    updateCrosshairPosition();
+                    break;
+                case 'Space':
+                    e.preventDefault();
+                    shoot();
+                    break;
+            }
+        });
+
+        // Mouse movement to control crosshair
+        document.addEventListener('mousemove', (e) => {
+            if (gameState.gameActive) {
+                crosshairPosition.x = (e.clientX / window.innerWidth) * 100;
+                crosshairPosition.y = (e.clientY / window.innerHeight) * 100;
+                updateCrosshairPosition();
+            }
+        });
+
+        // Mouse click to shoot
+        document.addEventListener('click', (e) => {
+            if (gameState.gameActive && !e.target.classList.contains('enemy')) {
+                shoot();
+            }
+        });
+
+        // Mobile D-pad controls
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!gameState.gameActive) return;
+                
+                const direction = btn.dataset.direction;
+                const moveSpeed = 3;
+                
+                switch(direction) {
+                    case 'up':
+                        crosshairPosition.y = Math.max(10, crosshairPosition.y - moveSpeed);
+                        break;
+                    case 'down':
+                        crosshairPosition.y = Math.min(90, crosshairPosition.y + moveSpeed);
+                        break;
+                    case 'left':
+                        crosshairPosition.x = Math.max(5, crosshairPosition.x - moveSpeed);
+                        break;
+                    case 'right':
+                        crosshairPosition.x = Math.min(95, crosshairPosition.x + moveSpeed);
+                        break;
+                }
+                updateCrosshairPosition();
+            });
+            
+            // Continuous movement while holding
+            let moveInterval;
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!gameState.gameActive) return;
+                
+                const direction = btn.dataset.direction;
+                const moveSpeed = 2;
+                
+                moveInterval = setInterval(() => {
+                    switch(direction) {
+                        case 'up':
+                            crosshairPosition.y = Math.max(10, crosshairPosition.y - moveSpeed);
+                            break;
+                        case 'down':
+                            crosshairPosition.y = Math.min(90, crosshairPosition.y + moveSpeed);
+                            break;
+                        case 'left':
+                            crosshairPosition.x = Math.max(5, crosshairPosition.x - moveSpeed);
+                            break;
+                        case 'right':
+                            crosshairPosition.x = Math.min(95, crosshairPosition.x + moveSpeed);
+                            break;
+                    }
+                    updateCrosshairPosition();
+                }, 50);
+            });
+            
+            btn.addEventListener('touchend', () => {
+                clearInterval(moveInterval);
+            });
+        });
+
+        // Touch controls for shooting
+        document.querySelector('.shoot-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState.gameActive) {
+                shoot();
+            }
+        });
+
+        // Prevent zoom on double tap
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'992193f675d1a8e1',t:'MTc2MTA1ODMzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
